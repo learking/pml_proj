@@ -1,0 +1,52 @@
+---
+title: "Practical Machine Learning Project"
+author: "KuangyuWang"
+date: "04/20/2015"
+output: html_document
+---
+
+# Data preprocessing
+
+### Load libraries
+
+```{r message=FALSE}
+library(RCurl)
+library(R.utils)
+```
+
+### Download training and testing data files
+
+```{r}
+# Download training data
+if(!file.exists("~/workspace/pml_proj/data/pml-training.csv")){
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "~/workspace/pml_proj/data/pml-training.csv", method="auto")
+}
+# Download testing data
+if(!file.exists("~/workspace/pml_proj/data/pml-testing.csv")){
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "~/workspace/pml_proj/data/pml-testing.csv", method="auto")
+}
+```
+
+### Read in data
+
+```{r cache=TRUE}
+trainingDT = read.csv("~/workspace/pml_proj/data/pml-training.csv")
+testingDT = read.csv("~/workspace/pml_proj/data/pml-testing.csv")
+```
+
+### Inspect features
+
+Remove numeric variables with too much missing data or have *near zero variance*
+
+```{r}
+allNumericVars = colnames(trainingDT)[sapply(trainingDT, is.numeric)]
+numeric2keepVars = allNumericVars
+
+# find vars
+```
+
+# Model building
+
+
+
+built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
