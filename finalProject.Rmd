@@ -12,6 +12,7 @@ output: html_document
 ```{r message=FALSE}
 library(RCurl)
 library(R.utils)
+library(e1071)
 ```
 
 ### Download training and testing data files
@@ -36,17 +37,58 @@ testingDT = read.csv("~/workspace/pml_proj/data/pml-testing.csv")
 
 ### Inspect features
 
-Remove numeric variables with too much missing data or have *near zero variance*
+*Handle numeric variables first.* Remove numeric variables with too much missing data or have *near zero variance*
 
 ```{r}
 allNumericVars = colnames(trainingDT)[sapply(trainingDT, is.numeric)]
 numeric2keepVars = allNumericVars
-
-# find vars
+## Remove vars with more than 90% NAs
+mostNA_vars = names(which(colMeans(is.na(trainingDT[,allNumericVars])) > 0.9))
+numeric2keepVars = numeric2keepVars[! numeric2keepVars %in% mostNA_vars]
+## Find and remove "near-zero variance" numeric vars
+num_vars_variances = apply(trainingDT[,numeric2keepVars], 2, var, na.rm=T)
+nearZeroVar_vars = names(which(num_vars_variances < 0.001))
+## check distribution skewness
+num_skewness = apply(trainingDT[,numeric2keepVars], 2, skewness, na.rm=T)
+skewed_num_vars = numeric2keepVars[which(num_skewness > 2)]
+## remove outliers
+get_outlier_idx <- function(inputDT, queryVar){
+  # find 99% value
+  tmpQ99 = quantile(inputDT[[queryVar]], 0.99)
+  # set cut-off
+  tmpCutoff = 3 * tmpQ99
+  # get and return outlier indices
+  return(which(inputDT[[queryVar]] > tmpCutoff))
+}
+outlier_numeric_vars_idx_list = lapply(skewed_num_vars, function(x) get_outlier_idx(trainingDT, x))
+outlier_numeric_vars_idx = unique(unlist(outlier_numeric_vars_idx_list))
+# detected only one outlier, remove it now
+trainingDT = trainingDT[-outlier_numeric_vars_idx,]
 ```
+
+*Handle categorical variables next.* 
+
+```{r}
+# get those variables that R recognizes as non-numeric (some of them actually are numeric, need to fix them before proceeding)
+other_vars = colnames(trainingDT)[!sapply(trainingDT, is.numeric)]
+# identify those vars with more than 90% missing values
+other_mostNA_vars = c()
+for (i in other_vars) {
+  if(length(which(trainingDT[,i] == "")) > nrow(trainingDT) * 0.9){
+    other_mostNA_vars = c(other_mostNA_vars, i)
+  }
+}
+other2keep_vars = other_vars[!other_vars %in% other_mostNA_vars]
+# 1) preprocess (center, scale, PCA). remember to use *predict* to make sure testing data set is properly transformed
+
+```
+
+
 
 # Model building
 
+cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases
 
+```{r}
 
-built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+```

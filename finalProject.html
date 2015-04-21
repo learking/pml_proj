@@ -73,7 +73,8 @@ img {
 <div id="load-libraries" class="section level3">
 <h3>Load libraries</h3>
 <pre class="r"><code>library(RCurl)
-library(R.utils)</code></pre>
+library(R.utils)
+library(e1071)</code></pre>
 </div>
 <div id="download-training-and-testing-data-files" class="section level3">
 <h3>Download training and testing data files</h3>
@@ -94,74 +95,40 @@ testingDT = read.csv(&quot;~/workspace/pml_proj/data/pml-testing.csv&quot;)</cod
 <div id="inspect-features" class="section level3">
 <h3>Inspect features</h3>
 <p>Remove numeric variables with too much missing data or have <em>near zero variance</em></p>
-<pre class="r"><code>colnames(trainingDT)[sapply(trainingDT, is.numeric)]</code></pre>
-<pre><code>##   [1] &quot;X&quot;                        &quot;raw_timestamp_part_1&quot;    
-##   [3] &quot;raw_timestamp_part_2&quot;     &quot;num_window&quot;              
-##   [5] &quot;roll_belt&quot;                &quot;pitch_belt&quot;              
-##   [7] &quot;yaw_belt&quot;                 &quot;total_accel_belt&quot;        
-##   [9] &quot;max_roll_belt&quot;            &quot;max_picth_belt&quot;          
-##  [11] &quot;min_roll_belt&quot;            &quot;min_pitch_belt&quot;          
-##  [13] &quot;amplitude_roll_belt&quot;      &quot;amplitude_pitch_belt&quot;    
-##  [15] &quot;var_total_accel_belt&quot;     &quot;avg_roll_belt&quot;           
-##  [17] &quot;stddev_roll_belt&quot;         &quot;var_roll_belt&quot;           
-##  [19] &quot;avg_pitch_belt&quot;           &quot;stddev_pitch_belt&quot;       
-##  [21] &quot;var_pitch_belt&quot;           &quot;avg_yaw_belt&quot;            
-##  [23] &quot;stddev_yaw_belt&quot;          &quot;var_yaw_belt&quot;            
-##  [25] &quot;gyros_belt_x&quot;             &quot;gyros_belt_y&quot;            
-##  [27] &quot;gyros_belt_z&quot;             &quot;accel_belt_x&quot;            
-##  [29] &quot;accel_belt_y&quot;             &quot;accel_belt_z&quot;            
-##  [31] &quot;magnet_belt_x&quot;            &quot;magnet_belt_y&quot;           
-##  [33] &quot;magnet_belt_z&quot;            &quot;roll_arm&quot;                
-##  [35] &quot;pitch_arm&quot;                &quot;yaw_arm&quot;                 
-##  [37] &quot;total_accel_arm&quot;          &quot;var_accel_arm&quot;           
-##  [39] &quot;avg_roll_arm&quot;             &quot;stddev_roll_arm&quot;         
-##  [41] &quot;var_roll_arm&quot;             &quot;avg_pitch_arm&quot;           
-##  [43] &quot;stddev_pitch_arm&quot;         &quot;var_pitch_arm&quot;           
-##  [45] &quot;avg_yaw_arm&quot;              &quot;stddev_yaw_arm&quot;          
-##  [47] &quot;var_yaw_arm&quot;              &quot;gyros_arm_x&quot;             
-##  [49] &quot;gyros_arm_y&quot;              &quot;gyros_arm_z&quot;             
-##  [51] &quot;accel_arm_x&quot;              &quot;accel_arm_y&quot;             
-##  [53] &quot;accel_arm_z&quot;              &quot;magnet_arm_x&quot;            
-##  [55] &quot;magnet_arm_y&quot;             &quot;magnet_arm_z&quot;            
-##  [57] &quot;max_roll_arm&quot;             &quot;max_picth_arm&quot;           
-##  [59] &quot;max_yaw_arm&quot;              &quot;min_roll_arm&quot;            
-##  [61] &quot;min_pitch_arm&quot;            &quot;min_yaw_arm&quot;             
-##  [63] &quot;amplitude_roll_arm&quot;       &quot;amplitude_pitch_arm&quot;     
-##  [65] &quot;amplitude_yaw_arm&quot;        &quot;roll_dumbbell&quot;           
-##  [67] &quot;pitch_dumbbell&quot;           &quot;yaw_dumbbell&quot;            
-##  [69] &quot;max_roll_dumbbell&quot;        &quot;max_picth_dumbbell&quot;      
-##  [71] &quot;min_roll_dumbbell&quot;        &quot;min_pitch_dumbbell&quot;      
-##  [73] &quot;amplitude_roll_dumbbell&quot;  &quot;amplitude_pitch_dumbbell&quot;
-##  [75] &quot;total_accel_dumbbell&quot;     &quot;var_accel_dumbbell&quot;      
-##  [77] &quot;avg_roll_dumbbell&quot;        &quot;stddev_roll_dumbbell&quot;    
-##  [79] &quot;var_roll_dumbbell&quot;        &quot;avg_pitch_dumbbell&quot;      
-##  [81] &quot;stddev_pitch_dumbbell&quot;    &quot;var_pitch_dumbbell&quot;      
-##  [83] &quot;avg_yaw_dumbbell&quot;         &quot;stddev_yaw_dumbbell&quot;     
-##  [85] &quot;var_yaw_dumbbell&quot;         &quot;gyros_dumbbell_x&quot;        
-##  [87] &quot;gyros_dumbbell_y&quot;         &quot;gyros_dumbbell_z&quot;        
-##  [89] &quot;accel_dumbbell_x&quot;         &quot;accel_dumbbell_y&quot;        
-##  [91] &quot;accel_dumbbell_z&quot;         &quot;magnet_dumbbell_x&quot;       
-##  [93] &quot;magnet_dumbbell_y&quot;        &quot;magnet_dumbbell_z&quot;       
-##  [95] &quot;roll_forearm&quot;             &quot;pitch_forearm&quot;           
-##  [97] &quot;yaw_forearm&quot;              &quot;max_roll_forearm&quot;        
-##  [99] &quot;max_picth_forearm&quot;        &quot;min_roll_forearm&quot;        
-## [101] &quot;min_pitch_forearm&quot;        &quot;amplitude_roll_forearm&quot;  
-## [103] &quot;amplitude_pitch_forearm&quot;  &quot;total_accel_forearm&quot;     
-## [105] &quot;var_accel_forearm&quot;        &quot;avg_roll_forearm&quot;        
-## [107] &quot;stddev_roll_forearm&quot;      &quot;var_roll_forearm&quot;        
-## [109] &quot;avg_pitch_forearm&quot;        &quot;stddev_pitch_forearm&quot;    
-## [111] &quot;var_pitch_forearm&quot;        &quot;avg_yaw_forearm&quot;         
-## [113] &quot;stddev_yaw_forearm&quot;       &quot;var_yaw_forearm&quot;         
-## [115] &quot;gyros_forearm_x&quot;          &quot;gyros_forearm_y&quot;         
-## [117] &quot;gyros_forearm_z&quot;          &quot;accel_forearm_x&quot;         
-## [119] &quot;accel_forearm_y&quot;          &quot;accel_forearm_z&quot;         
-## [121] &quot;magnet_forearm_x&quot;         &quot;magnet_forearm_y&quot;        
-## [123] &quot;magnet_forearm_z&quot;</code></pre>
+<pre class="r"><code>allNumericVars = colnames(trainingDT)[sapply(trainingDT, is.numeric)]
+numeric2keepVars = allNumericVars
+## Remove vars with more than 90% NAs
+mostNA_vars = names(which(colMeans(is.na(trainingDT[,allNumericVars])) &gt; 0.9))
+numeric2keepVars = numeric2keepVars[! numeric2keepVars %in% mostNA_vars]
+## Find and remove &quot;near-zero variance&quot; numeric vars
+num_vars_variances = apply(trainingDT[,numeric2keepVars], 2, var, na.rm=T)
+nearZeroVar_vars = names(which(num_vars_variances &lt; 0.001))
+## check distribution skewness
+num_skewness = apply(trainingDT[,numeric2keepVars], 2, skewness, na.rm=T)
+skewed_num_vars = numeric2keepVars[which(num_skewness &gt; 2)]
+## remove outliers
+get_outlier_idx &lt;- function(inputDT, queryVar){
+  # find 99% value
+  tmpQ99 = quantile(inputDT[[queryVar]], 0.99)
+  # set cut-off
+  tmpCutoff = 3 * tmpQ99
+  # get and return outlier indices
+  return(which(inputDT[[queryVar]] &gt; tmpCutoff))
+}
+outlier_numeric_vars_idx_list = lapply(skewed_num_vars, function(x) get_outlier_idx(trainingDT, x))
+outlier_numeric_vars_idx = unique(unlist(outlier_numeric_vars_idx_list))
+# detected only one outlier, remove it now
+trainingDT = trainingDT[-outlier_numeric_vars_idx,]</code></pre>
 </div>
 </div>
 <div id="model-building" class="section level1">
 <h1>Model building</h1>
-<p>built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
+<p>built your model</p>
+<ol style="list-style-type: decimal">
+<li><p>preprocess (center, scale, PCA). remember to use <em>predict</em> to make sure testing data set is properly transformed</p></li>
+<li></li>
+</ol>
+<p>cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
 </div>
 
 
