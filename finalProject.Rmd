@@ -13,6 +13,7 @@ output: html_document
 library(RCurl)
 library(R.utils)
 library(e1071)
+library(caret)
 ```
 
 ### Download training and testing data files
@@ -30,7 +31,7 @@ if(!file.exists("~/workspace/pml_proj/data/pml-testing.csv")){
 
 ### Read in data
 
-```{r cache=TRUE}
+```{r}
 trainingDT = read.csv("~/workspace/pml_proj/data/pml-training.csv")
 testingDT = read.csv("~/workspace/pml_proj/data/pml-testing.csv")
 ```
@@ -44,7 +45,7 @@ allNumericVars = colnames(trainingDT)[sapply(trainingDT, is.numeric)]
 numeric2keepVars = allNumericVars
 ## Remove vars with more than 90% NAs
 mostNA_vars = names(which(colMeans(is.na(trainingDT[,allNumericVars])) > 0.9))
-numeric2keepVars = numeric2keepVars[! numeric2keepVars %in% mostNA_vars]
+numeric2keepVars = numeric2keepVars[! numeric2keepVars %in% c(mostNA_vars, "X", "raw_timestamp_part_1", "raw_timestamp_part_2")]
 ## Find and remove "near-zero variance" numeric vars
 num_vars_variances = apply(trainingDT[,numeric2keepVars], 2, var, na.rm=T)
 nearZeroVar_vars = names(which(num_vars_variances < 0.001))
@@ -78,17 +79,78 @@ for (i in other_vars) {
     other_mostNA_vars = c(other_mostNA_vars, i)
   }
 }
-other2keep_vars = other_vars[!other_vars %in% other_mostNA_vars]
-# 1) preprocess (center, scale, PCA). remember to use *predict* to make sure testing data set is properly transformed
-
+# convert cvtd_timestamp to a new factor variable
+trainingDT$cvtd_day = as.factor(as.Date(trainingDT$cvtd_timestamp))
+testingDT$cvtd_day = as.factor(as.Date(testingDT$cvtd_timestamp))
+# categorical variables to keep
+other2keep_vars = c(other_vars[!other_vars %in% c(other_mostNA_vars,"classe","cvtd_timestamp")], "cvtd_day")
 ```
 
 
+Center and scale all numeric variables for both training and testing data. Combine numeric and categorical variables to form new, transformed data set.
+
+```{r}
+#center and scale
+preObj <- preProcess(trainingDT[,numeric2keepVars], method = c("center", "scale"))
+trainTransformed <- predict(preObj, trainingDT[,numeric2keepVars])
+testTransformed <- predict(preObj, testingDT[,numeric2keepVars])
+#convert to matrix
+trainTransformedMat = data.matrix(trainTransformed)
+testTransformedMat = data.matrix(testTransformed)
+
+nrow_train = nrow(trainTransformed)
+nrow_test = nrow(testTransformed)
+cat_var_DT = rbind(trainingDT[,other2keep_vars], testingDT[,other2keep_vars]) 
+#create design matrix for categorical variables
+cat_var_Mat = model.matrix(~ user_name + new_window + cvtd_day - 1, cat_var_DT)
+cat_train_Mat = cat_var_Mat[1:nrow_train,]
+cat_test_Mat = cat_var_Mat[(nrow_train+1):(nrow_train + nrow_test),]
+# combine to form the final matrix 
+trainTransformedMat = cbind(trainTransformedMat, cat_train_Mat)
+testTransformedMat = cbind(testTransformedMat, cat_test_Mat)
+```
 
 # Model building
 
-cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases
+Bulid models using multiple regularized multinomial regression methods. For each method, conduct cross validation.
 
 ```{r}
+# Fit models:
+fit.lasso <- glmnet(trainTransformedMat, trainingDT$classe, family="multinomial", alpha=1)
+#fit.ridge <- glmnet(trainTransformedMat, trainingDT$classe, family="multinomial", alpha=0)
+#fit.elnet <- glmnet(trainTransformedMat, trainingDT$classe, family="multinomial", alpha=.5)
 
+# 10-fold Cross validation for each alpha = 0, 0.5, 1.0
+fit.lasso.cv <- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure="class", alpha=1, 
+                          family="multinomial")
+#fit.ridge.cv <- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure="class", alpha=0,
+                          family="multinomial")
+#fit.elnet.cv <- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure="class", alpha=.5,
+                          family="multinomial")
+
+#plot misclassification error VS. log(lambda)
+#par(mfrow=c(3,1))
+plot(fit.lasso.cv, main="LASSO")
+#plot(fit.ridge.cv, main="Ridge")
+#plot(fit.elnet.cv, main="Elastic Net")
+```
+
+# Testing data prediction
+
+You will also use your prediction model to predict 20 different test cases
+
+```{r}
+#example:
+answers = rep("A", 20)
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+#example:
+pml_write_files(answers)
 ```
