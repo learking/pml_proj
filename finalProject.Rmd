@@ -14,6 +14,7 @@ library(RCurl)
 library(R.utils)
 library(e1071)
 library(caret)
+library(glmnet)
 ```
 
 ### Download training and testing data files
@@ -115,34 +116,23 @@ testTransformedMat = cbind(testTransformedMat, cat_test_Mat)
 Bulid models using multiple regularized multinomial regression methods. For each method, conduct cross validation.
 
 ```{r}
-# Fit models:
-fit.lasso <- glmnet(trainTransformedMat, trainingDT$classe, family="multinomial", alpha=1)
-#fit.ridge <- glmnet(trainTransformedMat, trainingDT$classe, family="multinomial", alpha=0)
-#fit.elnet <- glmnet(trainTransformedMat, trainingDT$classe, family="multinomial", alpha=.5)
-
 # 10-fold Cross validation for each alpha = 0, 0.5, 1.0
 fit.lasso.cv <- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure="class", alpha=1, 
-                          family="multinomial")
-#fit.ridge.cv <- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure="class", alpha=0,
-                          family="multinomial")
-#fit.elnet.cv <- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure="class", alpha=.5,
-                          family="multinomial")
-
+                          family="multinomial", standardize=FALSE, nfolds=5)
 #plot misclassification error VS. log(lambda)
-#par(mfrow=c(3,1))
 plot(fit.lasso.cv, main="LASSO")
-#plot(fit.ridge.cv, main="Ridge")
-#plot(fit.elnet.cv, main="Elastic Net")
+
+library(ROCR)
+score = predict(fit.lasso.cv, newx = testTransformedMat, type = "response",s=fit.lasso.cv$lambda.min)
+possibleClass = c("A","B","C","D","E")
+predClass = possibleClass[max.col(score[,,1])] 
 ```
 
 # Testing data prediction
 
-You will also use your prediction model to predict 20 different test cases
+Use prediction model to predict 20 different test cases and write files
 
 ```{r}
-#example:
-answers = rep("A", 20)
-
 pml_write_files = function(x){
   n = length(x)
   for(i in 1:n){
@@ -150,7 +140,5 @@ pml_write_files = function(x){
     write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
   }
 }
-
-#example:
-pml_write_files(answers)
+pml_write_files(predClass)
 ```
