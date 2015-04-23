@@ -15,6 +15,7 @@ library(R.utils)
 library(e1071)
 library(caret)
 library(glmnet)
+library(ROCR)
 ```
 
 ### Download training and testing data files
@@ -115,14 +116,13 @@ testTransformedMat = cbind(testTransformedMat, cat_test_Mat)
 
 Bulid models using multiple regularized multinomial regression methods. For each method, conduct cross validation.
 
-```{r}
-# 10-fold Cross validation for each alpha = 0, 0.5, 1.0
+```{r cache=TRUE}
+# 5-fold Cross validation for each alpha = 0, 0.5, 1.0
 fit.lasso.cv <- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure="class", alpha=1, 
                           family="multinomial", standardize=FALSE, nfolds=5)
 #plot misclassification error VS. log(lambda)
 plot(fit.lasso.cv, main="LASSO")
 
-library(ROCR)
 score = predict(fit.lasso.cv, newx = testTransformedMat, type = "response",s=fit.lasso.cv$lambda.min)
 possibleClass = c("A","B","C","D","E")
 predClass = possibleClass[max.col(score[,,1])] 
@@ -133,6 +133,7 @@ predClass = possibleClass[max.col(score[,,1])]
 Use prediction model to predict 20 different test cases and write files
 
 ```{r}
+setwd("~/workspace/pml_proj/result")
 pml_write_files = function(x){
   n = length(x)
   for(i in 1:n){
