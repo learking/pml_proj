@@ -114,7 +114,7 @@ testTransformedMat = cbind(testTransformedMat, cat_test_Mat)
 
 # Model building
 
-Bulid models using multiple regularized multinomial regression methods. For each method, conduct cross validation.
+Bulid models using multiple regularized multinomial regression methods. Conduct cross validation during the model building stage.
 
 ```{r cache=TRUE}
 # 5-fold Cross validation for each alpha = 0, 0.5, 1.0
@@ -127,6 +127,20 @@ score = predict(fit.lasso.cv, newx = testTransformedMat, type = "response",s=fit
 possibleClass = c("A","B","C","D","E")
 predClass = possibleClass[max.col(score[,,1])] 
 ```
+
+Get the mean cross-validated error (what we expect the out of sample error to be)
+```{r}
+lambdaVec = fit.lasso.cv$lambda
+cvmVec = fit.lasso.cv$cvm
+cvmVec[which(lambdaVec==fit.lasso.cv$lambda.min)]
+```
+
+The estimate of standard error of the mean cross-validated error is
+```{r}
+fit.lasso.cv$cvsd[which(lambdaVec==fit.lasso.cv$lambda.min)]
+```
+
+In other words, we can expect that our prediction is correct about 78.5 percent of time and wrong about 21.5 percent of time.
 
 # Testing data prediction
 

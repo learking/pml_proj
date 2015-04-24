@@ -160,7 +160,7 @@ testTransformedMat = cbind(testTransformedMat, cat_test_Mat)</code></pre>
 </div>
 <div id="model-building" class="section level1">
 <h1>Model building</h1>
-<p>Bulid models using multiple regularized multinomial regression methods. For each method, conduct cross validation.</p>
+<p>Bulid models using multiple regularized multinomial regression methods. Conduct cross validation during the model building stage.</p>
 <pre class="r"><code># 5-fold Cross validation for each alpha = 0, 0.5, 1.0
 fit.lasso.cv &lt;- cv.glmnet(trainTransformedMat, trainingDT$classe, type.measure=&quot;class&quot;, alpha=1, 
                           family=&quot;multinomial&quot;, standardize=FALSE, nfolds=5)
@@ -170,6 +170,15 @@ plot(fit.lasso.cv, main=&quot;LASSO&quot;)</code></pre>
 <pre class="r"><code>score = predict(fit.lasso.cv, newx = testTransformedMat, type = &quot;response&quot;,s=fit.lasso.cv$lambda.min)
 possibleClass = c(&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;,&quot;E&quot;)
 predClass = possibleClass[max.col(score[,,1])] </code></pre>
+<p>Get the mean cross-validated error (what we expect the out of sample error to be)</p>
+<pre class="r"><code>lambdaVec = fit.lasso.cv$lambda
+cvmVec = fit.lasso.cv$cvm
+cvmVec[which(lambdaVec==fit.lasso.cv$lambda.min)]</code></pre>
+<pre><code>## [1] 0.2150757</code></pre>
+<p>The estimate of standard error of the mean cross-validated error is</p>
+<pre class="r"><code>fit.lasso.cv$cvsd[which(lambdaVec==fit.lasso.cv$lambda.min)]</code></pre>
+<pre><code>## [1] 0.00477253</code></pre>
+<p>In other words, we can expect that our prediction is correct about 78.5 percent of time and wrong about 21.5 percent of time.</p>
 </div>
 <div id="testing-data-prediction" class="section level1">
 <h1>Testing data prediction</h1>
